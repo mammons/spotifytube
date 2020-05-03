@@ -8,6 +8,7 @@ import config
 import discord
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
+from recursiveJson import extract_values
 
 scopes = ["https://www.googleapis.com/auth/youtube"]
 
@@ -18,6 +19,7 @@ os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 api_service_name = "youtube"
 api_version = "v3"
 client_secrets_file = "client_secret_862974823303-5k6td646glkbegi3j4bq83ns87q2a17g.apps.googleusercontent.com.json"
+
 
 def get_authenticated_service():
     if os.path.exists("CREDENTIALS_PICKLE_FILE"):
@@ -61,7 +63,6 @@ async def on_message(message):
             sp_artistname = track_data['artists'][0]['name']
             sp_trackname = track_data['name']
 
-
             searchRequest = youtube.search().list(
                 part="snippet",
                 maxResults=1,
@@ -76,25 +77,37 @@ async def on_message(message):
                 yt_id = yt_data['items'][0]['id']['videoId']
                 yt_link = f"https://www.youtube.com/watch?v={yt_id}"
                 await message.channel.send(f"{yt_link}")
-
-                try:
-                    playlistRequest = youtube.playlistItems().insert(
-                        part="snippet",
-                        body={
-                            "snippet": {
-                                "playlistId": "PLvkJHpYMGDHsEd0ZW4wuARZ3TtFP5AFPK",
-                                "position": 0,
-                                "resourceId": {
-                                    "kind": "youtube#video",
-                                    "videoId": f"{yt_id}"
+                playlistQuery = youtube.playlistItems().list(
+                    part="snippet,contentDetails",
+                    maxResults=50,
+                    playlistId="PLBCF2DAC6FFB574DE"
+                )
+                existingVideos = playlistQuery.execute()
+                existingVideoIds = extract_values(existingVideos, "videoId")
+                # print(f"exsting vidos {existingVideos}")
+                print(f'just checkin {existingVideoIds}')
+                if(yt_id not in existingVideoIds):
+                    print(f'{yt_id} didnt match')
+                    try:
+                        playlistRequest = youtube.playlistItems().insert(
+                            part="snippet",
+                            body={
+                                "snippet": {
+                                    "playlistId": "PLvkJHpYMGDHsEd0ZW4wuARZ3TtFP5AFPK",
+                                    "position": 0,
+                                    "resourceId": {
+                                        "kind": "youtube#video",
+                                        "videoId": f"{yt_id}"
+                                    }
                                 }
                             }
-                        }
-                    )
-                    playListInsertResponse = playlistRequest.execute()
-                    await message.channel.send(f"I went ahead and added that song to the playlist for you: https://www.youtube.com/playlist?list=PLvkJHpYMGDHsEd0ZW4wuARZ3TtFP5AFPK")
-                except Exception as e:
-                    print(f"exception when inserting into playlist: {e}")
+                        )
+                        playListInsertResponse = playlistRequest.execute()
+                        await message.channel.send(f"I went ahead and added that song to the playlist for you: https://www.youtube.com/playlist?list=PLvkJHpYMGDHsEd0ZW4wuARZ3TtFP5AFPK")
+                    except Exception as e:
+                        print(f"exception when inserting into playlist: {e}")
+                else:
+                    await message.channel.sent("Lolo this is old, nerd")
         except Exception as e:
             await message.channel.send("something went wrong. i don't care")
             print(f"{e}")
