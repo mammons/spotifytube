@@ -20,6 +20,11 @@ api_service_name = "youtube"
 api_version = "v3"
 client_secrets_file = "client_secret_862974823303-5k6td646glkbegi3j4bq83ns87q2a17g.apps.googleusercontent.com.json"
 
+spotify_ccm = SpotifyClientCredentials(
+    config.spotify_client_id, config.spotify_secret)
+sp = spotipy.Spotify(client_credentials_manager=spotify_ccm)
+client = discord.Client()
+
 
 def get_authenticated_service():
     if os.path.exists("CREDENTIALS_PICKLE_FILE"):
@@ -37,10 +42,53 @@ def get_authenticated_service():
 
 youtube = get_authenticated_service()
 
-spotify_ccm = SpotifyClientCredentials(
-    config.spotify_client_id, config.spotify_secret)
-sp = spotipy.Spotify(client_credentials_manager=spotify_ccm)
-client = discord.Client()
+
+def get_youtube_video_data(spotify_link):
+    track_data = sp.track(spotify_link)
+
+    sp_artistname = track_data['artists'][0]['name']
+    sp_trackname = track_data['name']
+
+    searchRequest = youtube.search().list(
+        part="snippet",
+        maxResults=1,
+        q=f"{sp_artistname} {sp_trackname}",
+    )
+
+    return searchRequest.execute()
+
+
+def get_video_id(yt_data):
+    return yt_data['items'][0]['id']['videoId']
+
+
+def create_video_link(yt_video_id):
+    return f"https://www.youtube.com/watch?v={yt_video_id}"
+
+
+def get_existing_videos_in_playlist(playlist_id):
+    playlistQuery = youtube.playlistItems().list(
+        part="snippet,contentDetails",
+        maxResults=50,
+        playlistId=playlist_id
+    )
+    return playlistQuery.execute()
+
+
+def add_video_to_playlist(yt_video_id):
+    youtube.playlistItems().insert(
+        part="snippet",
+        body={
+            "snippet": {
+                "playlistId": config.youtube_playlist_id,
+                "position": 0,
+                "resourceId": {
+                    "kind": "youtube#video",
+                    "videoId": f"{yt_video_id}"
+                }
+            }
+        }
+    ).execute()
 
 
 @client.event
@@ -58,56 +106,24 @@ async def on_message(message):
         # sp.user_playlist_add_tracks("1234656043", "08YWXePJ0DzP9Ls1ccZHT7", message.content)
         await message.channel.send('Looking that shit up on YouTube...')
         try:
-            track_data = sp.track(message.content)
-
-            sp_artistname = track_data['artists'][0]['name']
-            sp_trackname = track_data['name']
-
-            searchRequest = youtube.search().list(
-                part="snippet",
-                maxResults=1,
-                q=f"{sp_artistname} {sp_trackname}",
-
-            )
-
-            yt_data = searchRequest.execute()
+            yt_data = get_youtube_video_data(message.content)
             if not yt_data:
                 await message.channel.send("Sorry. I couldn't find anything")
             else:
-                yt_id = yt_data['items'][0]['id']['videoId']
-                yt_link = f"https://www.youtube.com/watch?v={yt_id}"
+                yt_id = get_video_id(yt_data)
+                yt_link = create_video_link(yt_id)
                 await message.channel.send(f"{yt_link}")
-                playlistQuery = youtube.playlistItems().list(
-                    part="snippet,contentDetails",
-                    maxResults=50,
-                    playlistId="PLBCF2DAC6FFB574DE"
-                )
-                existingVideos = playlistQuery.execute()
+                existingVideos = get_existing_videos_in_playlist(
+                    config.youtube_playlist_id)
                 existingVideoIds = extract_values(existingVideos, "videoId")
-                # print(f"exsting vidos {existingVideos}")
-                print(f'just checkin {existingVideoIds}')
                 if(yt_id not in existingVideoIds):
-                    print(f'{yt_id} didnt match')
                     try:
-                        playlistRequest = youtube.playlistItems().insert(
-                            part="snippet",
-                            body={
-                                "snippet": {
-                                    "playlistId": "PLvkJHpYMGDHsEd0ZW4wuARZ3TtFP5AFPK",
-                                    "position": 0,
-                                    "resourceId": {
-                                        "kind": "youtube#video",
-                                        "videoId": f"{yt_id}"
-                                    }
-                                }
-                            }
-                        )
-                        playListInsertResponse = playlistRequest.execute()
-                        await message.channel.send(f"I went ahead and added that song to the playlist for you: https://www.youtube.com/playlist?list=PLvkJHpYMGDHsEd0ZW4wuARZ3TtFP5AFPK")
+                        add_video_to_playlist(yt_id)
+                        await message.channel.send(f"I went ahead and added that song to the playlist for you: https://www.youtube.com/playlist?list={config.youtube_playlist_id}")
                     except Exception as e:
                         print(f"exception when inserting into playlist: {e}")
                 else:
-                    await message.channel.sent("Lolo this is old, nerd")
+                    await message.channel.send("This is old, man. Keep up.")
         except Exception as e:
             await message.channel.send("something went wrong. i don't care")
             print(f"{e}")
