@@ -22,7 +22,8 @@ api_service_name = "youtube"
 api_version = "v3"
 client_secrets_file = "client_secret_862974823303-5k6td646glkbegi3j4bq83ns87q2a17g.apps.googleusercontent.com.json"
 
-token = util.prompt_for_user_token(config.sp_username, config.sp_scope, config.spotify_client_id, config.spotify_secret, config.sp_redirect_uri)
+token = util.prompt_for_user_token(config.sp_username, config.sp_scope, config.spotify_client_id,
+                                   config.spotify_secret, config.sp_redirect_uri, cache_path='.cache-1234656043')
 
 if token:
     sp = spotipy.Spotify(auth=token)
@@ -91,6 +92,7 @@ def add_video_to_youtube_playlist(yt_video_id):
         }
     ).execute()
 
+
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
@@ -110,10 +112,12 @@ async def on_message(message):
         sp_trackname = track_data['name']
 
         try:
-            current_sp_tracks = sp.user_playlist_tracks(config.sp_username, config.sp_playlist_id)
+            current_sp_tracks = sp.user_playlist_tracks(
+                config.sp_username, config.sp_playlist_id)
             current_sp_track_uris = extract_values(current_sp_tracks, 'uri')
             if track_uri not in current_sp_track_uris:
-                sp.user_playlist_add_tracks(config.sp_username, config.sp_playlist_id, [track_uri])
+                sp.user_playlist_add_tracks(
+                    config.sp_username, config.sp_playlist_id, [track_uri])
                 await message.channel.send("Added track to Spotify playlist")
             else:
                 await message.channel.send("Track already exists in Spotify playlist")
