@@ -1,6 +1,7 @@
 config.py
 *.vscode
 *.json
+/CREDENTIALS_PICKLE_FILE
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
