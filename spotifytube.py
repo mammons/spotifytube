@@ -9,7 +9,7 @@ import config
 import discord
 import spotipy
 import spotipy.util as util
-from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyOAuth
 from recursiveJson import extract_values
 
 scopes = ["https://www.googleapis.com/auth/youtube"]
@@ -22,14 +22,9 @@ api_service_name = "youtube"
 api_version = "v3"
 client_secrets_file = "client_secret_862974823303-5k6td646glkbegi3j4bq83ns87q2a17g.apps.googleusercontent.com.json"
 
-token = util.prompt_for_user_token(config.sp_username, config.sp_scope, config.spotify_client_id,
-                                   config.spotify_secret, config.sp_redirect_uri, cache_path='.cache-1234656043')
+spotify_auth_manager = SpotifyOAuth(config.spotify_client_id, config.spotify_secret, redirect_uri=config.sp_redirect_uri, scope=config.sp_scope, username='1234656043')
+sp = spotipy.Spotify(auth_manager=spotify_auth_manager)
 
-if token:
-    sp = spotipy.Spotify(auth=token)
-else:
-    print(f'cant get token for username {config.sp_username}')
-    sys.exit()
 client = discord.Client()
 
 
