@@ -140,7 +140,7 @@ async def on_message(message):
                 else:
                     await message.channel.send("Video already exists in YouTube playlist")
         except Exception as e:
-            await message.channel.send("something went wrong. i don't care")
+            await message.channel.send("something went wrong. I don't care")
             print(f"{e}")
 
 client.run(config.botToken)
