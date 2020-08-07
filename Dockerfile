@@ -1,5 +1,5 @@
-FROM python:3
-RUN pip install -U discord.py
+FROM python:3.8
+RUN pip install --upgrade discord.py
 RUN pip install spotipy
 RUN pip install google_auth_oauthlib
 RUN pip install google-api-python-client
