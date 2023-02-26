@@ -1,8 +1,0 @@
-build:
-  docker:
-    web: Dockerfile
-run:
-  worker:
-    command:
-      - python spotifytube.py
-    image: web
